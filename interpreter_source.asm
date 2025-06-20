@@ -18,8 +18,6 @@ code_too_long_msg db 27, '[31m', "[Error]: Code is too long.", 27, '[0m', 10
 code_too_long_msg_len = $ - code_too_long_msg
 empty_file_msg db 27, '[31m', "[Error]: Input file is empty.", 27, '[0m', 10
 empty_file_msg_len = $ - empty_file_msg
-stack_overflow_msg db 10, 27, '[31m', "[Error]: Stack overflow (too many nested loops)", 27, '[0m', 10
-stack_overflow_msg_len = $ - stack_overflow_msg
 input_error_msg db 10, 27, '[31m', "[Error]: Input error.", 27, '[0m', 10
 input_error_msg_len = $ - input_error_msg
 output_error_msg db 10, 27, '[31m', "[Error]: Output error.", 27, '[0m', 10
@@ -152,8 +150,6 @@ jmp mainloop
 loop_start:
 cmp byte [arr + r14], 0
 je skip_loop_body
-cmp r13, 100
-jge stack_overflow
 inc r13
 push r15
 jmp to_loop
@@ -235,10 +231,6 @@ jmp exit_err
 
 empty_file:
 syscall_3 1, 2, empty_file_msg, empty_file_msg_len
-jmp exit_err
-
-stack_overflow:
-syscall_3 1, 2, stack_overflow_msg, stack_overflow_msg_len
 jmp exit_err
 
 input_error:
