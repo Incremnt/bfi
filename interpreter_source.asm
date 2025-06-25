@@ -96,7 +96,7 @@ to_loop:
 inc r15
 jmp mainloop
 
-;--- bf instructions and more---;
+;--- bf instructions and more ---;
 plus:
 inc byte [arr + r14]
 jmp to_loop
