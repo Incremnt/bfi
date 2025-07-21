@@ -1,4 +1,4 @@
-;--- bf interpreter for Linux x86_64 by Incremnt (fasm btw) ---;
+;--- bf interpreter for Linux x86_64 by Denis Bazhenov (fasm btw) ---;
 format ELF64 executable
 entry _start
 
@@ -89,7 +89,7 @@ je char_in
 cmp byte [code + r15], 46  	 ;  .
 je char_out
 cmp byte [code + r15], 91 	 ;  [
-je loop__start
+je loop_start
 cmp byte [code + r15], 93 	 ;  ]
 je loop_end
 to_loop:
@@ -139,14 +139,6 @@ cmp rax, -1
 jle output_error
 jmp to_loop
 
-loop__start:
-cmp byte [code + r15 + 1], 45
-jne loop_start
-cmp byte [code + r15 + 2], 93
-jne loop_start
-add r15, 3
-mov byte [arr + r14], 0
-jmp mainloop
 loop_start:
 cmp byte [arr + r14], 0
 je skip_loop_body
