@@ -152,10 +152,9 @@ jmp to_loop
 
 loop_end:
 dec r13
-mov rbx, [rsp + r13 * 8]
 cmp byte [arr + r14], 0
 je to_loop
-mov r15, rbx
+mov r15, qword [rsp + r13 * 8]
 jmp mainloop
 
 skip_loop_body:
