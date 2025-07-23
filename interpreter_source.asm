@@ -66,13 +66,13 @@ xor r14, r14            ; bf tape element and [ counter in bracket check loop
 xor r13, r13            ; nesting degree and ] counter in bracket check loop
 
 bracket_check_loop:     ; unbalanced brackets check
-cmp byte [code + r15], 0
-je check_bracket_count
 cmp byte [code + r15], 91
 je inc_bracket1_count
 cmp byte [code + r15], 93
 je inc_bracket2_count
 inc r15
+cmp byte [code + r15], 0
+je check_bracket_count
 jmp bracket_check_loop
 
 mainloop:               ; cmp bf instructions and code from input file
@@ -155,6 +155,7 @@ dec r13
 cmp byte [arr + r14], 0
 je to_loop
 mov r15, qword [rsp + r13 * 8]
+mov qword [rsp + r13 * 8], 0
 jmp mainloop
 
 skip_loop_body:
@@ -165,6 +166,8 @@ cmp byte [code + r15], 91
 je inc_nesting
 cmp byte [code + r15], 93
 je dec_nesting
+cmp byte [code + r15], 0
+je exit
 jmp skip_loop
 
 inc_nesting:
