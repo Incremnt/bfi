@@ -6,28 +6,30 @@ entry _start
 
 ;--- data segment ---;
 segment readable writable
-arr db 30000 dup(0) 	; bf tape
-code db 20000 dup(0)	; bf code from input file
+arr db 30000 dup(0)     ; bf tape
+code db 20000 dup(0)    ; bf code from input file
 no_arg_msg db 27, '[31m', "[Error]: Arguments, please.", 27, '[0m', 10
 no_arg_msg_len = $ - no_arg_msg
 no_file_msg db 27, '[31m', "[Error]: Create this file first.", 27, '[0m', 10
 no_file_msg_len = $ - no_file_msg
-unbal_brack_msg db 27, '[31m', "[Error]: Unbalanced brackets.", 27, '[0m', 10
-unbal_brack_msg_len = $ - unbal_brack_msg
-code_too_long_msg db 27, '[31m', "[Error]: Code is too long.", 27, '[0m', 10
-code_too_long_msg_len = $ - code_too_long_msg
-empty_file_msg db 27, '[31m', "[Error]: Input file is empty.", 27, '[0m', 10
-empty_file_msg_len = $ - empty_file_msg
-input_error_msg db 10, 27, '[31m', "[Error]: Input error.", 27, '[0m', 10
+unbal_brack_msg db 27, '[31m', "[Error]: Unbalanced brackets.", 27, '[0m', 10                                                
+unbal_brack_msg_len = $ - unbal_brack_msg                                                      
+code_too_long_msg db 27, '[31m', "[Error]: Code is too long.", 27, '[0m', 10                                                                                 
+code_too_long_msg_len = $ - code_too_long_msg                                                  
+empty_file_msg db 27, '[31m', "[Error]: Input file is empty.", 27, '[0m', 10                                                                                 
+empty_file_msg_len = $ - empty_file_msg                                                        
+input_error_msg db 10, 27, '[31m', "[Error]: Input error.", 27, '[0m', 10                                                                                  
 input_error_msg_len = $ - input_error_msg
 output_error_msg db 10, 27, '[31m', "[Error]: Output error.", 27, '[0m', 10
 output_error_msg_len = $ - output_error_msg
+too_many_args_msg db 27, '[31m', "[Error]: Too many arguments.", 27, '[0m', 10
+too_many_args_msg_len = $ - too_many_args_msg
 
 
 
 ;--- text segment ---;
 segment readable executable
-macro syscall_3 num, arg1, arg2, arg3 {  	; macro for me and your eyes :3
+macro syscall_3 num, arg1, arg2, arg3 {         ; macro for me and your eyes :3
 mov rax, num
 mov rdi, arg1
 mov rsi, arg2
@@ -42,12 +44,14 @@ syscall
 }
 
 _start:
-mov rbx, [rsp + 16] 	; input file in rbx
+cmp qword [rsp], 3              ; exit with error if argc > 2
+jge too_many_args
+mov rbx, [rsp + 16]     ; input file in rbx
 cmp rbx, 0
-je no_arg 		; exit with error if you forgog arguments
+je no_arg               ; exit with error if you forgog arguments
 syscall_3 2, rbx, 0, 0
 cmp rax, -1
-jle no_file 		; exit with error if you forgor input file
+jle no_file             ; exit with error if you forgor input file
 mov r15, rax
 syscall_3 0, r15, code, 20000
 cmp byte [code + 19999], 0
@@ -55,13 +59,13 @@ jne code_too_long
 cmp byte [code], 0
 je empty_file
 syscall_1 3, r15
-pop r15			; stack clear
-pop r14			; stack clear
-xor r15, r15 		; code element
-xor r14, r14 		; bf tape element and [ counter in bracket check loop
-xor r13, r13 		; nesting degree and ] counter in bracket check loop
+pop r15                 ; stack clear
+pop r14                 ; stack clear
+xor r15, r15            ; code element
+xor r14, r14            ; bf tape element and [ counter in bracket check loop
+xor r13, r13            ; nesting degree and ] counter in bracket check loop
 
-bracket_check_loop: 	; unbalanced brackets check
+bracket_check_loop:     ; unbalanced brackets check
 cmp byte [code + r15], 0
 je check_bracket_count
 cmp byte [code + r15], 91
@@ -71,26 +75,26 @@ je inc_bracket2_count
 inc r15
 jmp bracket_check_loop
 
-mainloop: 		; cmp bf instructions and code from input file
-cmp r15, 20000 	; end if end
+mainloop:               ; cmp bf instructions and code from input file
+cmp r15, 20000  ; end if end
 jge exit
 cmp byte [code + r15], 0
-je exit 	; end if end
-cmp byte [code + r15], 43	 ;  +
+je exit         ; end if end
+cmp byte [code + r15], 43        ;  +
 je plus
-cmp byte [code + r15], 45 	 ;  -
+cmp byte [code + r15], 45        ;  -
 je minus
-cmp byte [code + r15], 62 	 ;  >
+cmp byte [code + r15], 62        ;  >
 je next
-cmp byte [code + r15], 60 	 ;  <
+cmp byte [code + r15], 60        ;  <
 je back
-cmp byte [code + r15], 44  	 ;  ,
+cmp byte [code + r15], 44        ;  ,
 je char_in
-cmp byte [code + r15], 46  	 ;  .
+cmp byte [code + r15], 46        ;  .
 je char_out
-cmp byte [code + r15], 91 	 ;  [
+cmp byte [code + r15], 91        ;  [
 je loop_start
-cmp byte [code + r15], 93 	 ;  ]
+cmp byte [code + r15], 93        ;  ]
 je loop_end
 to_loop:
 inc r15
@@ -117,7 +121,7 @@ jle to_max
 dec r14
 jmp to_loop
 
-char_in: 		; rbx as char buffer
+char_in:                ; rbx as char buffer
 mov rbx, arr
 add rbx, r14
 syscall_3 0, 0, rbx, 1
@@ -131,7 +135,7 @@ eof:
 mov byte [arr + r14], 0
 jmp to_loop
 
-char_out: 		; rbx as char buffer
+char_out:               ; rbx as char buffer
 mov rbx, arr
 add rbx, r14
 syscall_3 1, 1, rbx, 1
@@ -231,4 +235,8 @@ jmp exit_err
 
 output_error:
 syscall_3 1, 2, output_error_msg, output_error_msg_len
+jmp exit_err
+
+too_many_args:
+syscall_3 1, 2, too_many_args_msg, too_many_args_msg_len
 jmp exit_err
