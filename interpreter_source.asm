@@ -63,7 +63,7 @@ pop r15                 ; stack clear
 pop r14                 ; stack clear
 xor r15, r15            ; code element
 xor r14, r14            ; bf tape element and [ counter in bracket check loop
-xor r13, r13            ; nesting degree and ] counter in bracket check loop
+xor r13, r13            ; ] counter in bracket check loop
 
 bracket_check_loop:     ; unbalanced brackets check
 cmp byte [code + r15], 91
@@ -145,21 +145,16 @@ jmp to_loop
 
 loop_start:
 cmp byte [arr + r14], 0
-je skip_loop_body
-inc r13
+je skip_loop
 push r15
 jmp to_loop
 
 loop_end:
-dec r13
 cmp byte [arr + r14], 0
 je to_loop
-mov r15, qword [rsp + r13 * 8]
-mov qword [rsp + r13 * 8], 0
+pop r15
 jmp mainloop
 
-skip_loop_body:
-mov r13, 1
 skip_loop:
 inc r15
 cmp byte [code + r15], 91
