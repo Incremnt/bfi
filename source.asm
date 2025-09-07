@@ -118,7 +118,7 @@ jmp to_loop
 loop_start:
 cmp byte [arr + r14], 0
 je skip_loop
-cmp word [code + r15 + 1], ']-'        ; [-] pattern optimization
+cmp word [code + r15 + 1], 0x5d2d        ; [-] pattern optimization
 je clear_current_cell
 push r15
 jmp to_loop
