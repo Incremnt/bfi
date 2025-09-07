@@ -16,13 +16,13 @@ syscall
 
 macro syscall_1 num, arg1 {
 mov rax, num
-mov rdi, arg1
-syscall
-}
-
-_start:
-cmp qword [rsp], 3              ; exit with error if argc > 2
-jge too_many_args
+mov rdi, arg1                                                  
+syscall                                                                            
+}                                                                                  
+                                                                                   
+_start:                                                                            
+cmp qword [rsp], 3              ; exit with error if argc > 2                      
+jge too_many_args                                                                 
 mov rbx, [rsp + 16]     ; input file in rbx
 cmp rbx, 0
 je no_arg               ; exit with error if you forgog arguments
@@ -61,15 +61,16 @@ cmp byte [code + r15], 0
 je check_bracket_count
 jmp bracket_check_loop
 
+jmp mainloop
+
+to_loop:
+inc r15
 mainloop:               ; cmp bf instructions and code from input file
 xor rax, rax
 mov al, byte [code + r15]
 test al, al
 jz exit
 jmp [jump_table + rax * 8]
-to_loop:
-inc r15
-jmp mainloop
 
 ;--- bf instructions and more ---;
 plus:
@@ -117,6 +118,8 @@ jmp to_loop
 loop_start:
 cmp byte [arr + r14], 0
 je skip_loop
+cmp word [code + r15 + 1], 0x5d2d        ; [-] pattern optimization
+je clear_current_cell
 push r15
 jmp to_loop
 
@@ -151,6 +154,11 @@ jmp to_loop
 to_max:
 mov r14, 29999
 jmp to_loop
+
+clear_current_cell:
+mov byte [arr + r14], 0
+add r15, 3
+jmp mainloop
 
 exit:
 syscall_1 60, 0
