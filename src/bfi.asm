@@ -17,7 +17,7 @@
 ; Project: Brainfuck Interpreter ;
 ; File: bfi.asm                  ;
 ; Author: Incremnt               ;
-; Compiled file: bfi		 ;
+; Compiled file: bfi             ;
 ; License: GPLv3                 ;
 ;================================;
 
@@ -86,17 +86,17 @@ _start:
 
   mov rbx, [rsp + 16]			; second argument pointer in rbx
   mov rbx, qword [rbx]			; string with this address in rbx
-  cmp rbx, qword [embed_flag]		;
+  cmp rbx, qword [embed_flag]		
   je embed_mode 			; interpret in embedded mode if "--embed" flag enabled
                                    
   cmp qword [rsp], 3            	; exit with error if argc > 2                      
-  jge too_many_args_err             	;                                                   
+  jge too_many_args_err             	                                                 
   mov rbx, [rsp + 16]           	; input file pointer in rbx
-  cmp rbx, 0				;
+  cmp rbx, 0				
   je no_arg_err                     	; exit with error if you forgog arguments
 
   SYSCALL_3 SYS_OPEN, rbx, O_RDONLY, 0  ; open input file in read only mode
-  cmp rax, -1				;
+  cmp rax, -1				
   jle input_file_err            	; handle file open error
 
   mov rbx, rax					        ; file descriptor in rbx
@@ -267,14 +267,14 @@ exit:
 
 embed_mode:
   cmp qword [rsp], 4            	; exit with error if argc != 4                      
-  jg too_many_args_err             	;                                                   
-  jl no_arg_err				;
+  jg too_many_args_err            
+  jl no_arg_err				
   mov rbx, [rsp + 24]           	; input file pointer in rbx
-  cmp rbx, 0				;
+  cmp rbx, 0				
   je no_arg_err                     	; exit with error if you enter not enough arguments
 
   SYSCALL_3 SYS_OPEN, rbx, O_RDONLY, 0  	; open input file in read only mode
-  cmp rax, -1					;
+  cmp rax, -1					
   jle input_file_err            		; handle file open error
 
   mov rbx, rax					        ; file descriptor in rbx
@@ -285,12 +285,12 @@ embed_mode:
 
   mov rbx, [rsp + 32]					  ; output file pointer in rbx
   SYSCALL_3 SYS_OPEN, rbx, OUT_FILE_FLAGS, 0755o          ; open output file with O_WRONLY, O_TRUNC, O_APPEND, O_CREAT flags
-  cmp rax, -1						  ;
+  cmp rax, -1						  
   jle output_file_err 				          ; handle file open error
   push rax						  ; save output file descriptor
 
   SYSCALL_3 SYS_OPEN, embed_interpreter_dir, O_RDONLY, 0  ; open embedded interpreter file
-  cmp rax, -1						  ;
+  cmp rax, -1						  
   jle bfi_file_err				          ; handle file open error
   mov rbx, rax						  ; fd in rax
   SYSCALL_3 SYS_READ, rbx, embedded_code, EMBED_CODE_SIZE ; read binary code from file
