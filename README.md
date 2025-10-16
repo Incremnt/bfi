@@ -21,7 +21,7 @@ To build the interpreter, you need **Flat Assembler (FASM)**.
         ```
 
 ## Usage
-To interpret code from input file, you need execute interpreter with input file.
+To interpret the code from the input file, you need to execute interpreter with the input file.
 1.  **Normal mode**:
         ```bash
         ./bfi input.bf
