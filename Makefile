@@ -1,7 +1,7 @@
 #================================#
 # Project: Brainfuck interpreter #
-# File: Makefile		 #
-# Author: Incremnt		 #
+# File: Makefile		         #
+# Author: Incremnt		         #
 #================================#
 
 
@@ -10,8 +10,8 @@ ASM = fasm
 RM = rm -f
 
 # targets
-BFI_TARGET = bfi
-EMB_TARGET = embed_bfi.elf
+BFI_TARGET = bin/bfi
+EMB_TARGET = bin/embed_bfi.elf
 
 # sources
 BFI_SRC = src/bfi.asm
