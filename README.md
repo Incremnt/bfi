@@ -17,22 +17,18 @@ To build the interpreter, you need **Flat Assembler (FASM)**.
 
 2.  **Build the repository**
    ```bash
-        sudo make all
+   sudo make all
    ```
 
 ## Usage
 To interpret the code from the input file, you need to execute interpreter with the input file.
 1.  **Normal mode**:
    ```bash
-    
-        ./bfi input.bf
-    
+   ./bfi input.bf
    ```
 3.  **Embedded mode**:
     ```bash
-    
-        ./bfi --embed input.bf out.a
-    
+    ./bfi --embed input.bf out.a
     ```
 
  
