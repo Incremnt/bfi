@@ -28,7 +28,7 @@ To interpret the code from the input file, you need to execute interpreter with 
    ```
 2.  **Embedded mode**:
    ```bash
-   ./bfi --embed input.bf out.a
+   ./bfi --embed input.bf a.out
    ```
 
  
