@@ -120,7 +120,7 @@ _start:
   mov r14, bf_tape
   xor rcx, rcx
 
-bracket_check_loop:    		 ; unbalanced brackets check
+.bracket_check_loop:    		 ; unbalanced brackets check
   cmp byte [r15], '['
   je .inc_rcx
   cmp byte [r15], ']'
@@ -128,12 +128,12 @@ bracket_check_loop:    		 ; unbalanced brackets check
   cmp byte [r15], 0
   je .is_balanced
   inc r15
-  jmp bracket_check_loop
+  jmp .bracket_check_loop
 
 .inc_rcx:
   inc rcx
   inc r15
-  jmp bracket_check_loop
+  jmp .bracket_check_loop
 
 .is_balanced:
   test rcx, 1
@@ -286,7 +286,7 @@ embed_mode:
   mov r15, bf_code
   xor rcx, rcx
 
-  bracket_check_loop:    		 ; unbalanced brackets check
+  .bracket_check_loop:    		 ; unbalanced brackets check
   cmp byte [r15], '['
   je .inc_rcx
   cmp byte [r15], ']'
@@ -294,12 +294,12 @@ embed_mode:
   cmp byte [r15], 0
   je .is_balanced
   inc r15
-  jmp bracket_check_loop
+  jmp .bracket_check_loop
 
 .inc_rcx:
   inc rcx
   inc r15
-  jmp bracket_check_loop
+  jmp .bracket_check_loop
 
 .is_balanced:
   test rcx, 1
