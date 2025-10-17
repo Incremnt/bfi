@@ -124,7 +124,7 @@ _start:
   cmp byte [r15], '['
   je .inc_rcx
   cmp byte [r15], ']'
-  je .inc_rcx
+  je .dec_rcx
   cmp byte [r15], 0
   je .is_balanced
   inc r15
@@ -135,8 +135,15 @@ _start:
   inc r15
   jmp .bracket_check_loop
 
+.dec_rcx:
+  dec rcx
+  inc r15
+  test rcx, rcx
+  js unbalanced_brackets_err
+  jmp .bracket_check_loop
+
 .is_balanced:
-  test rcx, 1
+  test rcx, rcx
   jnz unbalanced_brackets_err
 
 
@@ -286,11 +293,11 @@ embed_mode:
   mov r15, bf_code
   xor rcx, rcx
 
-  .bracket_check_loop:    		 ; unbalanced brackets check
+.bracket_check_loop:    		 ; unbalanced brackets check
   cmp byte [r15], '['
   je .inc_rcx
   cmp byte [r15], ']'
-  je .inc_rcx
+  je .dec_rcx
   cmp byte [r15], 0
   je .is_balanced
   inc r15
@@ -301,8 +308,15 @@ embed_mode:
   inc r15
   jmp .bracket_check_loop
 
+.dec_rcx:
+  dec rcx
+  inc r15
+  test rcx, rcx
+  js unbalanced_brackets_err
+  jmp .bracket_check_loop
+
 .is_balanced:
-  test rcx, 1
+  test rcx, rcx
   jnz unbalanced_brackets_err
 
   mov rbx, [rsp + 32]					  ; output file pointer in rbx
