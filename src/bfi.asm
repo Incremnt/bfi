@@ -283,6 +283,28 @@ embed_mode:
   cmp byte [bf_code + BF_CODE_SIZE - 1], 0
   jne code_too_long_err
 
+  mov r15, bf_code
+  xor rcx, rcx
+
+  bracket_check_loop:    		 ; unbalanced brackets check
+  cmp byte [r15], '['
+  je .inc_rcx
+  cmp byte [r15], ']'
+  je .inc_rcx
+  cmp byte [r15], 0
+  je .is_balanced
+  inc r15
+  jmp bracket_check_loop
+
+.inc_rcx:
+  inc rcx
+  inc r15
+  jmp bracket_check_loop
+
+.is_balanced:
+  test rcx, 1
+  jnz unbalanced_brackets_err
+
   mov rbx, [rsp + 32]					  ; output file pointer in rbx
   SYSCALL_3 SYS_OPEN, rbx, OUT_FILE_FLAGS, 0755o          ; open output file with O_WRONLY, O_TRUNC, O_APPEND, O_CREAT flags
   cmp rax, -1						  
