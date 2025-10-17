@@ -24,11 +24,11 @@ To build the interpreter, you need **Flat Assembler (FASM)**.
 To interpret the code from the input file, you need to execute interpreter with the input file.
 1.  **Normal mode**:
    ```bash
-   ./bfi input.bf
+   ./bfi input.b
    ```
 2.  **Embedded mode**:
    ```bash
-   ./bfi --embed input.bf a.out
+   ./bfi --embed input.b a.out
    ```
 
  
