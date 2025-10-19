@@ -62,7 +62,6 @@ E_USAGE     = 64    ; too many/few arguments
 E_DATAERR   = 65    ; unbalanced brackets
 E_NOINPUT   = 66    ; can't open input file
 E_CANTCREAT = 73    ; can't create output file(embed mode)
-E_SOFTWARE  = 70    ; code is too long
 
 BF_TAPE_SIZE    = 30000
 BF_CODE_SIZE    = 65536
@@ -286,8 +285,6 @@ embed_mode:
   mov rbx, rax                                          ; file descriptor in rbx
   SYSCALL_3 SYS_READ, rbx, r15, BF_CODE_SIZE            ; read code from input file
   SYSCALL_1 SYS_CLOSE, rbx                              ; close input file
-  cmp byte [r15 + BF_CODE_SIZE - 1], 0
-  jne software_err
 
   mov r14, qword [embed_code_ptr]
   mov r15, qword [bf_code_ptr]
@@ -354,9 +351,6 @@ usage_err:
 
 dataerr_err:
   SYSCALL_1 SYS_EXIT, E_DATAERR
-
-software_err:
-  SYSCALL_1 SYS_EXIT, E_SOFTWARE
 
 ;--------------------;
 ;--- data segment ---;
