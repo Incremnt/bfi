@@ -24,11 +24,11 @@ BFI_INSTALL_DIR = /usr/local/bin
 all: $(BFI_TARGET) $(EMB_TARGET)
 
 $(BFI_TARGET): $(BFI_SRC)
-	$(ASM) $< $@
+	@$(ASM) $< $@
 	@chmod +x $@
 
 $(EMB_TARGET): $(EMB_SRC)
-	$(ASM) $< $@
+	@$(ASM) $< $@
 
 install: all
 	@$(RM) $(EMB_INSTALL_DIR)
