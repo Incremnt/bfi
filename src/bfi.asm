@@ -21,92 +21,106 @@
 ; License: GPLv3                 ;
 ;================================;
 
-
-
 format ELF64 executable
 entry _start
-
 
 ;--------------;
 ;--- macros ---;
 ;--------------;
-                                                               
 macro SYSCALL_3 num, arg1, arg2, arg3 {         ; syscall macro for me and your eyes :3    
-mov rax, num                                                                      
-mov rdi, arg1
-mov rsi, arg2
-mov rdx, arg3
-syscall
+  mov rax, num                                                                      
+  mov rdi, arg1
+  mov rsi, arg2
+  mov rdx, arg3
+  syscall
 }
 
 macro SYSCALL_1 num, arg1 {
-mov rax, num
-mov rdi, arg1                                                  
-syscall                                                                            
+  mov rax, num
+  mov rdi, arg1                                                  
+  syscall                                                                            
 }                                                                                  
 
-SYS_READ = 0
+SYS_READ  = 0
 SYS_WRITE = 1
-SYS_OPEN = 2
+SYS_OPEN  = 2
 SYS_CLOSE = 3
-SYS_EXIT = 60
+SYS_BRK   = 12
+SYS_EXIT  = 60
 
-O_RDONLY = 0x0000
-O_WRONLY = 0x0001
-O_CREAT = 0x0040
-O_TRUNC = 0x0200
-O_APPEND = 0x0400
+O_RDONLY       = 0x0000
+O_WRONLY       = 0x0001
+O_CREAT        = 0x0040
+O_TRUNC        = 0x0200
+O_APPEND       = 0x0400
+IN_FILE_FLAGS  = O_RDONLY
 OUT_FILE_FLAGS = O_WRONLY + O_CREAT + O_TRUNC + O_APPEND
+BFI_FILE_FLAGS = O_RDONLY
 
-STDERR = 2
+E_SUCCESS   = 0     ; success
+E_USAGE     = 64    ; too many/few arguments
+E_DATAERR   = 65    ; unbalanced brackets
+E_NOINPUT   = 66    ; can't open input file
+E_CANTCREAT = 73    ; can't create output file(embed mode)
+E_SOFTWARE  = 70    ; code is too long
 
-BF_TAPE_SIZE = 30000
-BF_CODE_SIZE = 20000                                                              
-BF_MAX_CELL = 29999
+BF_TAPE_SIZE    = 30000
+BF_CODE_SIZE    = 65536
+EMBED_CODE_SIZE = 2634
+
+BF_MAX_CELL   = 29999
 BF_FIRST_CELL = 0
-
-EMBED_CODE_SIZE = 32577
-
-
 
 ;--------------------;
 ;--- text segment ---;
 ;--------------------;
-
+;
 ; register usage:
-; r15 - pointer to brainfuck code
-; r14 - pointer to brainfuck tape
+; r15 - pointer to the brainfuck code
+; r14 - pointer to the brainfuck tape (in normal), pointer to the embedded code (in embed mode)
+; r13 - pointer to the first cell
+; r12 - pointer to the max cell
 ; rcx - counter
 ; rbx - buffer
-
+;
 segment readable executable
 _start:
+  SYSCALL_1 SYS_BRK, 0      ; get current heap pointer
+  mov rbx, rax
+  add rbx, BF_CODE_SIZE + BF_TAPE_SIZE
+  SYSCALL_1 SYS_BRK, rbx    ; allocate memory for the code and tape arrays
+
+  sub rbx, BF_CODE_SIZE + BF_TAPE_SIZE    ; set pointers
+  mov [bf_code_ptr], rbx
+  add rbx, BF_CODE_SIZE
+  mov [bf_tape_ptr], rbx
+  mov r15, qword [bf_code_ptr]
+  mov r14, qword [bf_tape_ptr]
+  mov r12, r14
+  mov r13, r14
+  add r13, BF_MAX_CELL
+
   cmp qword [rsp], 1
-  je no_arg_err
+  je usage_err
 
-  mov rbx, [rsp + 16]			; second argument pointer in rbx
-  mov rbx, qword [rbx]			; string with this address in rbx
+  mov rbx, [rsp + 16]                   ; second argument pointer in rbx
+  mov rbx, qword [rbx]                  ; string with this address in rbx
   cmp rbx, qword [embed_flag]		
-  je embed_mode 			; interpret in embedded mode if "--embed" flag enabled
+  je embed_mode                         ; interpret in embedded mode if "--embed" flag enabled
                                    
-  cmp qword [rsp], 3            	; exit with error if argc > 2                      
-  jge too_many_args_err             	                                                 
-  mov rbx, [rsp + 16]           	; input file pointer in rbx
-  cmp rbx, 0				
-  je no_arg_err                     	; exit with error if you forgog arguments
+  cmp qword [rsp], 2                    ; exit with error if argc != 2                      
+  jne usage_err       	                                                 
+  mov rbx, [rsp + 16]                   ; input file pointer in rbx
 
-  SYSCALL_3 SYS_OPEN, rbx, O_RDONLY, 0  ; open input file in read only mode
+  SYSCALL_3 SYS_OPEN, rbx, IN_FILE_FLAGS, 0  ; open input file in read only mode
   cmp rax, -1				
-  jle input_file_err            	; handle file open error
+  jle noinput_err                            ; handle file open error
 
-  mov rbx, rax					        ; file descriptor in rbx
-  SYSCALL_3 SYS_READ, rbx, bf_code, BF_CODE_SIZE        ; read code from input file
-  SYSCALL_1 SYS_CLOSE, rbx              		; close input file
-  cmp byte [bf_code + BF_CODE_SIZE - 1], 0
-  jne code_too_long_err
+  mov rbx, rax                                          ; file descriptor in rbx
+  SYSCALL_3 SYS_READ, rbx, r15, BF_CODE_SIZE            ; read code from input file
+  SYSCALL_1 SYS_CLOSE, rbx                              ; close input file
 
-
-  mov qword [jump_table + 0 * 8], exit		; init jump table
+  mov qword [jump_table + 0 * 8], success_exit          ; init jump table
   mov qword [jump_table + '+' * 8], inc_cell
   mov qword [jump_table + '-' * 8], dec_cell
   mov qword [jump_table + '>' * 8], next_cell
@@ -116,11 +130,11 @@ _start:
   mov qword [jump_table + '[' * 8], bf_loop_start
   mov qword [jump_table + ']' * 8], bf_loop_end
 
-  mov r15, bf_code
-  mov r14, bf_tape
+  mov r15, qword [bf_code_ptr]
+  mov r14, qword [bf_tape_ptr]
   xor rcx, rcx
 
-.bracket_check_loop:    		 ; unbalanced brackets check
+.bracket_check_loop:                    ; unbalanced brackets check
   cmp byte [r15], '['
   je .inc_rcx
   cmp byte [r15], ']'
@@ -129,26 +143,23 @@ _start:
   je .is_balanced
   inc r15
   jmp .bracket_check_loop
-
 .inc_rcx:
   inc rcx
   inc r15
   jmp .bracket_check_loop
-
 .dec_rcx:
   dec rcx
   inc r15
   test rcx, rcx
-  js unbalanced_brackets_err
+  js dataerr_err
   jmp .bracket_check_loop
-
 .is_balanced:
   test rcx, rcx
-  jnz unbalanced_brackets_err
+  jnz dataerr_err
 
-
-mov r15, bf_code
-dec r15
+  mov r15, qword [bf_code_ptr]
+  mov r14, qword [bf_tape_ptr]
+  dec r15
 
 mainloop:
   inc r15
@@ -156,42 +167,34 @@ mainloop:
   mov bl, byte [r15]
   jmp [jump_table + rbx * 8]
 
-
 ;--------------------------------------;
 ;--- brainfuck instruction handlers ---;
 ;--------------------------------------;
-
-inc_cell:			; increment cell
+inc_cell:               ; increment cell
   inc byte [r14]
   jmp mainloop
 
-
-dec_cell:			; decrement cell
+dec_cell:               ; decrement cell
   dec byte [r14]
   jmp mainloop
 
-
-next_cell: 		; increment bf_tape pointer
-  cmp r14, BF_MAX_CELL + bf_tape
+next_cell:              ; increment bf_tape pointer
+  cmp r14, r13
   jge .to_first_cell
   inc r14
   jmp mainloop
-
 .to_first_cell:
-  mov r14, BF_FIRST_CELL + bf_tape
+  mov r14, r12
   jmp mainloop
 
-
-prev_cell: 		; decrement bf_tape pointer
-  cmp r14, bf_tape + BF_FIRST_CELL
-  jle .to_last_cell
+prev_cell:              ; decrement bf_tape pointer
+  cmp r14, r12
+  jle .to_max_cell
   dec r14
   jmp mainloop
-
-.to_last_cell:
-  mov r14, BF_MAX_CELL + bf_tape
+.to_max_cell:
+  mov r14, r13
   jmp mainloop
-
 
 cell_in:                ; read cell from stdin
   xor rax, rax
@@ -202,8 +205,7 @@ cell_in:                ; read cell from stdin
   syscall
   jmp mainloop
 
-
-cell_out:		; write cell to stdout
+cell_out:               ; write cell to stdout
   xor rax, rax
   inc rax
   xor rdi, rdi
@@ -214,15 +216,13 @@ cell_out:		; write cell to stdout
   syscall
   jmp mainloop
 
-
-bf_loop_start:		          ; start loop
+bf_loop_start:                    ; start loop
   cmp byte [r14], 0
-  je .init_skip_loop		  ; skip if cell = 0
+  je .init_skip_loop              ; skip if cell = 0
   cmp word [r15 + 1], '-]'        ; [-] pattern optimization
   je .clear_cell
-  push r15 		          ; save code pointer in stack
+  push r15                        ; save code pointer in stack
   jmp mainloop
-
 .init_skip_loop:
   xor rcx, rcx
 .skip_loop:
@@ -234,66 +234,67 @@ bf_loop_start:		          ; start loop
   test rcx, rcx
   jnz .skip_loop
   jmp .exit_skip_loop
-
 .inc_rcx:
   inc rcx
   inc r15
   jmp .skip_loop
-
 .dec_rcx:
   dec rcx
   inc r15
   jmp .skip_loop
-
 .exit_skip_loop:
   xor rcx, rcx
   sub r15, 2
   jmp mainloop
-
 .clear_cell:
   mov byte [r14], 0
   add r15, 2
   jmp mainloop
 
-
 bf_loop_end:
-  cmp byte [r14], 0		        ; skip if cell = 0
+  cmp byte [r14], 0                     ; skip if cell = 0
   je mainloop
-  pop r15				; '[' code pointer in r15
+  pop r15                               ; '[' code pointer in r15
   dec r15
   jmp mainloop
-
-
-exit:
-  SYSCALL_1 SYS_EXIT, 0
-
 
 ;-------------------------------;
 ;--- embedded mode interpret ---;
 ;-------------------------------;
-
 embed_mode:
-  cmp qword [rsp], 4            	; exit with error if argc != 4                      
-  jg too_many_args_err            
-  jl no_arg_err				
-  mov rbx, [rsp + 24]           	; input file pointer in rbx
-  cmp rbx, 0				
-  je no_arg_err                     	; exit with error if you enter not enough arguments
+  SYSCALL_1 SYS_BRK, 0      ; get current heap pointer
+  mov rbx, rax
+  push rbx
+  add rbx, BF_CODE_SIZE + EMBED_CODE_SIZE
+  SYSCALL_1 SYS_BRK, rbx    ; allocate memory for the code, embed code and tape arrays
 
-  SYSCALL_3 SYS_OPEN, rbx, O_RDONLY, 0  	; open input file in read only mode
+  pop rbx
+  mov [bf_code_ptr], rbx    ; set pointers
+  add rbx, BF_CODE_SIZE
+  mov [embed_code_ptr], rbx
+  mov r15, qword [bf_code_ptr]
+  mov r14, qword [embed_code_ptr]
+
+  cmp qword [rsp], 4                    ; exit with error if argc != 4                      
+  jne usage_err            				
+  mov rbx, [rsp + 24]                   ; input file pointer in rbx
+
+  SYSCALL_3 SYS_OPEN, rbx, IN_FILE_FLAGS, 0               ; open input file in read only mode
   cmp rax, -1					
-  jle input_file_err            		; handle file open error
+  jle noinput_err                                         ; handle file open error
 
-  mov rbx, rax					        ; file descriptor in rbx
-  SYSCALL_3 SYS_READ, rbx, bf_code, BF_CODE_SIZE        ; read code from input file
-  SYSCALL_1 SYS_CLOSE, rbx              		; close input file
-  cmp byte [bf_code + BF_CODE_SIZE - 1], 0
-  jne code_too_long_err
+  mov rbx, rax                                          ; file descriptor in rbx
+  SYSCALL_3 SYS_READ, rbx, r15, BF_CODE_SIZE            ; read code from input file
+  SYSCALL_1 SYS_CLOSE, rbx                              ; close input file
+  cmp byte [r15 + BF_CODE_SIZE - 1], 0
+  jne software_err
 
-  mov r15, bf_code
+  mov r14, qword [embed_code_ptr]
+  mov r15, qword [bf_code_ptr]
   xor rcx, rcx
+  push r15
 
-.bracket_check_loop:    		 ; unbalanced brackets check
+.bracket_check_loop:                                    ; unbalanced brackets check
   cmp byte [r15], '['
   je .inc_rcx
   cmp byte [r15], ']'
@@ -302,111 +303,70 @@ embed_mode:
   je .is_balanced
   inc r15
   jmp .bracket_check_loop
-
 .inc_rcx:
   inc rcx
   inc r15
   jmp .bracket_check_loop
-
 .dec_rcx:
   dec rcx
   inc r15
   test rcx, rcx
-  js unbalanced_brackets_err
+  js dataerr_err
   jmp .bracket_check_loop
-
 .is_balanced:
   test rcx, rcx
-  jnz unbalanced_brackets_err
+  jnz dataerr_err
 
-  mov rbx, [rsp + 32]					  ; output file pointer in rbx
+  pop r15
+  mov rbx, [rsp + 32]                                     ; output file pointer in rbx
   SYSCALL_3 SYS_OPEN, rbx, OUT_FILE_FLAGS, 0755o          ; open output file with O_WRONLY, O_TRUNC, O_APPEND, O_CREAT flags
   cmp rax, -1						  
-  jle output_file_err 				          ; handle file open error
-  push rax						  ; save output file descriptor
+  jle cantcreat_err                                       ; handle file open error
+  push rax                                                ; save output file descriptor
 
-  SYSCALL_3 SYS_OPEN, embed_interpreter_dir, O_RDONLY, 0  ; open embedded interpreter file
+  SYSCALL_3 SYS_OPEN, embed_interpreter_dir, BFI_FILE_FLAGS, 0  ; open embedded interpreter file
   cmp rax, -1						  
-  jle bfi_file_err				          ; handle file open error
-  mov rbx, rax						  ; fd in rax
-  SYSCALL_3 SYS_READ, rbx, embedded_code, EMBED_CODE_SIZE ; read binary code from file
-  SYSCALL_1 SYS_CLOSE, rbx				  ; close interpreter file
+  jle noinput_err                                               ; handle file open error
+  mov rbx, rax                                                  ; fd in rax
+  SYSCALL_3 SYS_READ, rbx, r14, EMBED_CODE_SIZE                 ; read binary code from file
+  SYSCALL_1 SYS_CLOSE, rbx                                      ; close interpreter file
 
-  pop rbx							; output file descriptor in rbx
-  SYSCALL_3 SYS_WRITE, rbx, embedded_code, EMBED_CODE_SIZE      ; write interpreter binary code to output file
-  SYSCALL_3 SYS_WRITE, rbx, bf_code, BF_CODE_SIZE		; write brainfuck code to output file
-  SYSCALL_1 SYS_CLOSE, rbx					; close output file
-  SYSCALL_1 SYS_EXIT, 0						; finally exit!!! :D
-
+  pop rbx                                                       ; output file descriptor in rbx
+  SYSCALL_3 SYS_WRITE, rbx, r14, EMBED_CODE_SIZE                ; write interpreter binary code to output file
+  SYSCALL_3 SYS_WRITE, rbx, r15, BF_CODE_SIZE                   ; write brainfuck code to output file
+  SYSCALL_1 SYS_CLOSE, rbx                                      ; close output file
+  SYSCALL_1 SYS_EXIT, E_SUCCESS                                 ; finally exit!!! :D
 
 ;--------------;
 ;--- errors ---;
 ;--------------;
+success_exit:
+  SYSCALL_1 SYS_EXIT, E_SUCCESS
 
-exit_err:
-  SYSCALL_1 SYS_EXIT, 1
+noinput_err:
+  SYSCALL_1 SYS_EXIT, E_NOINPUT
 
-input_file_err:
-  SYSCALL_3 SYS_WRITE, STDERR, input_file_msg, input_file_msg_len
-  jmp exit_err
+cantcreat_err:
+  SYSCALL_1 SYS_EXIT, E_CANTCREAT
 
-output_file_err:
-  SYSCALL_3 SYS_WRITE, STDERR, output_file_msg, output_file_msg_len
-  jmp exit_err
+usage_err:
+  SYSCALL_1 SYS_EXIT, E_USAGE
 
-bfi_file_err:
-  SYSCALL_3 SYS_WRITE, STDERR, bfi_file_msg, bfi_file_msg_len
-  jmp exit_err
+dataerr_err:
+  SYSCALL_1 SYS_EXIT, E_DATAERR
 
-no_arg_err:
-  SYSCALL_3 SYS_WRITE, STDERR, no_arg_msg, no_arg_msg_len
-  jmp exit_err
-
-unbalanced_brackets_err:
-  SYSCALL_3 SYS_WRITE, STDERR, unbal_brack_msg, unbal_brack_msg_len
-  jmp exit_err
-
-code_too_long_err:
-  SYSCALL_3 SYS_WRITE, STDERR, code_too_long_msg, code_too_long_msg_len
-  jmp exit_err
-
-too_many_args_err:
-  SYSCALL_3 SYS_WRITE, STDERR, too_many_args_msg, too_many_args_msg_len
-  jmp exit_err
-
-
+software_err:
+  SYSCALL_1 SYS_EXIT, E_SOFTWARE
 
 ;--------------------;
 ;--- data segment ---;
 ;--------------------;
-
 segment readable writable
-bf_tape db BF_TAPE_SIZE dup(0)     ; bf tape
-bf_code db BF_CODE_SIZE dup(0)    ; bf code from input file
-
-no_arg_msg db 27, '[31m', "[Error]: More arguments, please.", 27, '[0m', 10
-no_arg_msg_len = $ - no_arg_msg
-
-input_file_msg db 27, '[31m', "[Error]: Can't open input file.", 27, '[0m', 10
-input_file_msg_len = $ - input_file_msg
-
-output_file_msg db 27, '[31m', "[Error]: Can't open output file.", 27, '[0m', 10
-output_file_msg_len = $ - output_file_msg
-
-bfi_file_msg db 27, '[31m', "[Error]: Can't open embedded interpreter file.", 27, '[0m', 10
-bfi_file_msg_len = $ - bfi_file_msg
-
-unbal_brack_msg db 27, '[31m', "[Error]: Unbalanced brackets.", 27, '[0m', 10                                                
-unbal_brack_msg_len = $ - unbal_brack_msg
-
-code_too_long_msg db 27, '[31m', "[Error]: Code is too long.", 27, '[0m', 10
-code_too_long_msg_len = $ - code_too_long_msg                                                  
-
-too_many_args_msg db 27, '[31m', "[Error]: Too many arguments.", 27, '[0m', 10
-too_many_args_msg_len = $ - too_many_args_msg
-
 jump_table dq 256 dup(mainloop)
 
 embed_flag db "--embed", 0
-embed_interpreter_dir db "/usr/local/share/bfi/embed_bfi.elf", 0
-embedded_code db EMBED_CODE_SIZE dup(0)
+embed_interpreter_dir db "/usr/local/share/bfi/embed_bfi.elf", 0    
+
+bf_tape_ptr dq 0  
+bf_code_ptr dq 0   
+embed_code_ptr dq 0 
