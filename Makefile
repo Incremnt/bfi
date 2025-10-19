@@ -24,19 +24,19 @@ BFI_INSTALL_DIR = /usr/local/bin
 all: $(BFI_TARGET) $(EMB_TARGET)
 
 $(BFI_TARGET): $(BFI_SRC)
-	$(ASM) $< $@
-	chmod +x $@
+	@$(ASM) $< $@
+	@chmod +x $@
 
 $(EMB_TARGET): $(EMB_SRC)
-	$(ASM) $< $@
+	@$(ASM) $< $@
 
 install: all
-	mkdir $(EMB_INSTALL_DIR)
-	chmod 1777 $(EMB_INSTALL_DIR)
-	cp $(EMB_TARGET) $(EMB_INSTALL_DIR)
-	cp $(BFI_TARGET) $(BFI_INSTALL_DIR)
+	@mkdir $(EMB_INSTALL_DIR)
+	@chmod 1777 $(EMB_INSTALL_DIR)
+	@cp $(EMB_TARGET) $(EMB_INSTALL_DIR)
+	@cp $(BFI_TARGET) $(BFI_INSTALL_DIR)
 
 clean:
-	$(RM) $(BFI_TARGET) $(EMB_TARGET)
+	@$(RM) $(BFI_TARGET) $(EMB_TARGET)
 
 .PHONY: all install clean
