@@ -91,10 +91,18 @@ BF_FIRST_CELL = 0
 ;
 segment readable executable
 _start:
-  SYSCALL_1 SYS_BRK, 0      ; get current heap pointer
+  cmp qword [rsp], 1          ; exit with error if you forgog arguments
+  je usage_err
+
+  mov rbx, [rsp + 16]                   ; second argument pointer in rbx
+  mov rbx, qword [rbx]                  ; string with this address in rbx
+  cmp rbx, qword [embed_flag]		
+  je embed_mode                         ; interpret in embedded mode if "--embed" flag enabled
+
+  SYSCALL_1 SYS_BRK, 0               ; get current heap pointer
   mov rbx, rax
   add rbx, BF_CODE_SIZE + BF_TAPE_SIZE
-  SYSCALL_1 SYS_BRK, rbx    ; allocate memory for the code and tape arrays
+  SYSCALL_1 SYS_BRK, rbx             ; allocate memory for the code and tape arrays
 
   sub rbx, BF_CODE_SIZE + BF_TAPE_SIZE    ; set pointers
   mov [bf_code_ptr], rbx
@@ -105,15 +113,7 @@ _start:
   mov r12, r14
   mov r13, r14
   add r13, BF_MAX_CELL
-
-  cmp qword [rsp], 1
-  je usage_err
-
-  mov rbx, [rsp + 16]                   ; second argument pointer in rbx
-  mov rbx, qword [rbx]                  ; string with this address in rbx
-  cmp rbx, qword [embed_flag]		
-  je embed_mode                         ; interpret in embedded mode if "--embed" flag enabled
-                                   
+                        
   cmp qword [rsp], 2                    ; exit with error if argc != 2                      
   jne usage_err       	                                                 
   mov rbx, [rsp + 16]                   ; input file pointer in rbx
