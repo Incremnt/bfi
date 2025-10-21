@@ -28,9 +28,9 @@ entry _start
 ;--- macros ---;
 ;--------------;
 macro SYSCALL_1 num, arg1 {      ; syscall macro for me and your eyes :3
-mov rdi, arg1
-mov rax, num
-syscall
+  mov rdi, arg1
+  mov rax, num
+  syscall
 }
 
 SYS_BRK  = 12
