@@ -127,7 +127,6 @@ cell_in:		; read cell from stdin
 
 cell_out:		; write cell to stdout
   SYSCALL_3 SYS_WRITE, 1, r14, 1
-  syscall
   jmp mainloop
 
 bf_loop_start:              ; save r15 in stack and skip loop if cell = 0
