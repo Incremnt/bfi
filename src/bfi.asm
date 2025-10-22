@@ -71,7 +71,7 @@ E_SOFTWARE  = 70    ; code is too long
 ; sizes
 BF_TAPE_SIZE    = 30000
 BF_CODE_SIZE    = 65537
-EMBED_CODE_SIZE = 2634
+EMBED_CODE_SIZE = 2638
 
 ; max and first cells
 BF_MAX_CELL   = 29999
@@ -215,7 +215,6 @@ cell_in:                ; read cell from stdin
 
 cell_out:               ; write cell to stdout
   SYSCALL_3 SYS_WRITE, 1, r14, 1
-  syscall
   jmp mainloop
 
 bf_loop_start:                    ; start loop
