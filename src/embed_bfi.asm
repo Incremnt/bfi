@@ -41,15 +41,19 @@ macro SYSCALL_3 num, arg1, arg2, arg3 {
   syscall
 }
 
+; syscall numbers
 SYS_WRITE = 1
 SYS_BRK   = 12
 SYS_EXIT  = 60
 
+; error codes
 E_SUCCESS = 0
 
+; sizes
 BF_TAPE_SIZE = 30000
 BF_CODE_SIZE = 65537
 
+; max brainfuck cell
 BF_MAX_CELL  = 29999
 
 ;--------------------;
