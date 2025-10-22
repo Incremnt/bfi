@@ -82,15 +82,15 @@ mainloop: 		; jump to label in jump table
 ;--------------------------------------;
 ;--- brainfuck instruction handlers ---;
 ;--------------------------------------;
-inc_cell:		; increment cell
+inc_cell:
   inc byte [r14]
   jmp mainloop
 
-dec_cell:		; decrement cell
+dec_cell:
   dec byte [r14]
   jmp mainloop
 
-next_cell:		; increment bf_code pointer
+next_cell:		; increment bf_code pointer and go to the first cell if current cell is max
   cmp r14, r13
   je .to_first_cell
   inc r14
@@ -99,7 +99,7 @@ next_cell:		; increment bf_code pointer
   mov r14, r12
   jmp mainloop
 
-prev_cell:		; decrement bf_code pointer
+prev_cell:		; decrement bf_code pointer and go to the max cell if curren cell is first
   cmp r14, r12
   je .to_max_cell
   dec r14
@@ -179,4 +179,4 @@ segment readable writable
 jump_table dq 256 dup(mainloop)
 
 bf_tape_ptr dq 0
-bf_code db BF_CODE_SIZE dup(0xBF)     ; reserve space for the brainfuck code(BF = brainfuck :))
+bf_code = $         ; it's just a pointer
