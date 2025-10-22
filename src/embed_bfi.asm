@@ -33,8 +33,17 @@ macro SYSCALL_1 num, arg1 {      ; syscall macro for me and your eyes :3
   syscall
 }
 
-SYS_BRK  = 12
-SYS_EXIT = 60
+macro SYSCALL_3 num, arg1, arg2, arg3 {
+  mov rdi, arg1
+  mov rsi, arg2
+  mov rdx, arg3
+  mov rax, num
+  syscall
+}
+
+SYS_WRITE = 1
+SYS_BRK   = 12
+SYS_EXIT  = 60
 
 E_SUCCESS = 0
 
@@ -111,20 +120,13 @@ prev_cell:		; decrement bf_code pointer and go to the max cell if curren cell is
 cell_in:		; read cell from stdin
   xor rax, rax
   xor rdi, rdi
-  lea rsi, [r14]
-  xor rdx, rdx
-  inc rdx
+  mov rsi, r14
+  mov rdx, 1
   syscall
   jmp mainloop
 
 cell_out:		; write cell to stdout
-  xor rax, rax
-  inc rax
-  xor rdi, rdi
-  inc rdi
-  lea rsi, [r14]
-  xor rdx, rdx
-  inc rdx
+  SYSCALL_3 SYS_WRITE, 1, r14, 1
   syscall
   jmp mainloop
 
