@@ -208,20 +208,13 @@ prev_cell:              ; decrement brainfuck tape pointer and go to the max cel
 cell_in:                ; read cell from stdin
   xor rax, rax
   xor rdi, rdi
-  lea rsi, [r14]
-  xor rdx, rdx
-  inc rdx
+  mov rsi, r14
+  mov rdx, 1
   syscall
   jmp mainloop
 
 cell_out:               ; write cell to stdout
-  xor rax, rax
-  inc rax
-  xor rdi, rdi
-  inc rdi
-  lea rsi, [r14]
-  xor rdx, rdx
-  inc rdx
+  SYSCALL_3 SYS_WRITE, 1, r14, 1
   syscall
   jmp mainloop
 
