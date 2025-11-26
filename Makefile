@@ -1,13 +1,13 @@
 #================================#
 # Project: Brainfuck interpreter #
-# File: Makefile		         #
-# Author: Incremnt		         #
+# File: Makefile                 #
+# Author: Incremnt               #
 #================================#
 
 
 # tools
 ASM = fasm
-RM = rm -r
+RM = rm -rf
 
 # targets
 BFI_TARGET = bin/bfi
